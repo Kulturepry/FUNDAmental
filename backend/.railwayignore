@@ -1,0 +1,18 @@
+# Exclude frontend files
+../app/
+../components/
+../constants/
+../lib/
+../store/
+../types/
+../utils/
+../assets/
+../package.json
+../package-lock.json
+../bun.lock
+../tsconfig.json
+../expo-env.d.ts
+../app.json
+../.gitignore
+../.expo/
+../node_modules/ 
