@@ -117,7 +117,6 @@ app.listen(PORT, () => {
 });
 
 // In-memory user store for demo
-const users = [];
 
 // Registration endpoint
 app.post('/api/auth/register', (req, res) => {
@@ -199,7 +198,6 @@ app.post('/api/auth/forgot-password', (req, res) => {
 });
 
 // In-memory community posts store
-const communityPosts = [];
 
 // Get community posts
 app.get('/api/community/posts', (req, res) => {
@@ -250,7 +248,6 @@ app.post('/api/community/posts/:id/rate', (req, res) => {
 });
 
 // In-memory notifications store
-const notifications = [];
 
 // Get notifications for a user
 app.get('/api/notifications', (req, res) => {
@@ -287,7 +284,6 @@ app.patch('/api/notifications/:id/read', (req, res) => {
 });
 
 // In-memory courses store
-const courses = [];
 
 // Create course (teacher only)
 app.post('/api/courses', (req, res) => {
@@ -353,10 +349,8 @@ app.post('/api/courses/:id/leave', (req, res) => {
 });
 
 // In-memory comments store
-const comments = [];
 
 // In-memory banned users
-const bannedUsers = [];
 
 // Report a comment
 app.post('/api/comments/:id/report', (req, res) => {
@@ -475,7 +469,6 @@ app.get('/api/comments', (req, res) => {
 });
 
 // In-memory chat messages per course
-const courseChats = {};
 
 // Get chat messages for a course
 app.get('/api/courses/:id/chat', (req, res) => {
