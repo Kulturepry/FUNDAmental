@@ -119,7 +119,7 @@ app.post('/api/resources/upload', upload.single('file'), async (req, res) => {
       data: {
         title,
         description,
-        type,
+        type: type || 'document', // Default to 'document' if not provided
         subject,
         subjectId,
         filename: file.filename,

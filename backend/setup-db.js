@@ -47,15 +47,8 @@ async function setupDatabase() {
     ];
     
     for (const courseData of sampleCourses) {
-      const course = await prisma.course.upsert({
-        where: { 
-          title_teacherId: {
-            title: courseData.title,
-            teacherId: courseData.teacherId,
-          }
-        },
-        update: {},
-        create: courseData,
+      const course = await prisma.course.create({
+        data: courseData,
       });
       console.log('✅ Sample course created:', course.title);
     }
