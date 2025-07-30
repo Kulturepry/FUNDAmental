@@ -6,9 +6,15 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm install --legacy-peer-deps
 
-# Copy source code
+# Copy Prisma schema
+COPY prisma ./prisma/
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Copy application code
 COPY . .
 
 # Create uploads directory
@@ -17,5 +23,5 @@ RUN mkdir -p uploads
 # Expose port
 EXPOSE 3001
 
-# Start the app
+# Start the application
 CMD ["npm", "start"] 
