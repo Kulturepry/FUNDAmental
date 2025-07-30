@@ -2,6 +2,9 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# Install OpenSSL and other required dependencies
+RUN apk add --no-cache openssl libssl1.1
+
 # Copy package files
 COPY package*.json ./
 
@@ -11,8 +14,8 @@ RUN npm install --legacy-peer-deps
 # Copy Prisma schema
 COPY prisma ./prisma/
 
-# Generate Prisma client
-RUN npx prisma generate
+# Generate Prisma client with specific binary target
+RUN npx prisma generate --schema=./prisma/schema.prisma
 
 # Copy application code
 COPY . .
