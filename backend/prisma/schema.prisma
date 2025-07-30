@@ -140,8 +140,8 @@ model Comment {
 
   // Relations
   user      User     @relation(fields: [userId], references: [id])
-  resource  Resource? @relation(fields: [itemId], references: [id])
-  assignment Assignment? @relation(fields: [itemId], references: [id])
+  resource  Resource? @relation(fields: [itemId], references: [id], map: "comments_resource_fkey")
+  assignment Assignment? @relation(fields: [itemId], references: [id], map: "comments_assignment_fkey")
 
   @@map("comments")
 }
