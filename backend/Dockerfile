@@ -1,9 +1,9 @@
-FROM node:18-alpine
+FROM node:18-slim
 
 WORKDIR /app
 
 # Install OpenSSL and other required dependencies
-RUN apk add --no-cache openssl libssl1.1
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
 COPY package*.json ./
