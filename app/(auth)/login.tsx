@@ -46,7 +46,7 @@ export default function LoginScreen() {
     } catch (error) {
       Alert.alert(
         'Login Failed',
-        'Invalid email or password. For demo, use student@example.com or teacher@example.com with any password.',
+        'Invalid email or password. Please check your credentials and try again.',
         [{ text: 'OK' }]
       );
     }
@@ -127,13 +127,6 @@ export default function LoginScreen() {
             Sign Up
           </Text>
         </Text>
-        
-        <View style={styles.demoContainer}>
-          <Text style={styles.demoTitle}>Demo Accounts:</Text>
-          <Text style={styles.demoText}>Student: student@example.com</Text>
-          <Text style={styles.demoText}>Teacher: teacher@example.com</Text>
-          <Text style={styles.demoText}>(Use any password)</Text>
-        </View>
       </View>
 
       <Modal
@@ -214,23 +207,5 @@ const styles = StyleSheet.create({
   footerLink: {
     color: Colors.primary,
     fontWeight: '600',
-  },
-  demoContainer: {
-    marginTop: 40,
-    padding: 16,
-    backgroundColor: Colors.primary + '10',
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  demoTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.primary,
-    marginBottom: 8,
-  },
-  demoText: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-    marginBottom: 4,
   },
 });
