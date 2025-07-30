@@ -8,14 +8,11 @@ RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install --legacy-peer-deps
-
-# Copy Prisma schema
+# Copy Prisma schema first
 COPY prisma ./prisma/
 
-# Generate Prisma client with specific binary target
-RUN npx prisma generate --schema=./prisma/schema.prisma
+# Install dependencies (this will trigger postinstall script)
+RUN npm install --legacy-peer-deps
 
 # Copy application code
 COPY . .
