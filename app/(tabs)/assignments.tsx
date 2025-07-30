@@ -150,11 +150,16 @@ export default function AssignmentsScreen() {
       if (result.canceled) return;
       const file = result.assets[0];
       const formData = new FormData();
-      formData.append('file', file as any);
+      formData.append('file', {
+        uri: file.uri,
+        name: file.name,
+        type: file.mimeType || 'application/octet-stream',
+      } as any);
       formData.append('title', file.name);
       formData.append('description', 'Uploaded via app');
       formData.append('classId', user.gradeLevel || '');
-      const response = await fetch('http://192.168.137.1:3001/api/assignments/upload', {
+      formData.append('uploadedBy', user.id.toString());
+      const response = await fetch('https://fundamental.onrender.com/api/assignments/upload', {
         method: 'POST',
         body: formData,
       });
@@ -178,7 +183,7 @@ export default function AssignmentsScreen() {
 
   const handleDownloadAssignment = async (assignment: any) => {
     try {
-      const url = `http://192.168.137.1:3001/api/assignments/${assignment.id}/download`;
+      const url = `https://fundamental.onrender.com/api/assignments/${assignment.id}/download`;
       // For demo: open in browser (real app: use FileSystem API)
       if (Platform.OS === 'web') {
         window.open(url, '_blank');

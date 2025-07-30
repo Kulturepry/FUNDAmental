@@ -1,28 +1,29 @@
 {
   "expo": {
-    "name": "FUNDA: Knowledge is POWER",
-    "slug": "learnify-e-learning-platform",
+    "name": "FUNDAmental",
+    "slug": "fundamental",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "icon": "./assets/images/funda.png",
+    "scheme": "fundamental",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#2D6A4F"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.rork.learnify-e-learning-platform"
+      "bundleIdentifier": "com.kulturepry.fundamental"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/funda.png",
+        "backgroundColor": "#2D6A4F"
       },
-      "package": "app.rork.learnify-e-learning-platform"
+      "package": "com.kulturepry.fundamental",
+      "permissions": ["INTERNET", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -31,7 +32,7 @@
       [
         "expo-router",
         {
-          "origin": "https://rork.com/"
+          "origin": "https://fundamental.onrender.com/"
         }
       ]
     ],

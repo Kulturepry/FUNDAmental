@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import Colors from '@/constants/colors';
 
-const API_BASE_URL = 'http://192.168.137.1:3001/api';
+const API_BASE_URL = 'https://fundamental.onrender.com/api';
 
 export interface ChatScreenProps {
   courseId: string | number;

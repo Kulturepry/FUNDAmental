@@ -13,7 +13,7 @@ import { GradeLevel } from '@/types';
 
 export default function ProfileScreen() {
   const { user, updateProfile } = useAuthStore();
-  const API_BASE_URL = 'http://localhost:3001/api';
+  const API_BASE_URL = 'https://fundamental.onrender.com/api';
   
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');

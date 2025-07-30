@@ -3,8 +3,10 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { PrismaClient } = require('@prisma/client');
 
 const app = express();
+const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
@@ -39,464 +41,586 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// In-memory data storage (replace with database in production)
-let users = [];
-let courses = [];
-let assignments = [];
-let resources = [];
-let notifications = [];
-let comments = [];
-let bannedUsers = [];
-let courseChats = {};
-let communityPosts = [];
-
 // --- ASSIGNMENTS ---
-app.post('/api/assignments/upload', upload.single('file'), (req, res) => {
-  const { title, description, classId } = req.body;
-  const file = req.file;
-  if (!file) return res.status(400).json({ message: 'No file uploaded' });
-  const assignment = {
-    id: assignments.length + 1,
-    title,
-    description,
-    classId,
-    filename: file.filename,
-    originalname: file.originalname,
-    path: file.path,
-    mimetype: file.mimetype,
-    size: file.size,
-    uploadedAt: new Date(),
-  };
-  assignments.push(assignment);
-  res.json({ assignment });
+app.post('/api/assignments/upload', upload.single('file'), async (req, res) => {
+  try {
+    const { title, description, classId, uploadedBy } = req.body;
+    const file = req.file;
+    if (!file) return res.status(400).json({ message: 'No file uploaded' });
+    
+    const assignment = await prisma.assignment.create({
+      data: {
+        title,
+        description,
+        classId,
+        filename: file.filename,
+        originalname: file.originalname,
+        path: file.path,
+        mimetype: file.mimetype,
+        size: file.size,
+        uploadedBy: parseInt(uploadedBy) || 1, // Default to user 1 if not provided
+      },
+    });
+    res.json({ assignment });
+  } catch (error) {
+    console.error('Assignment upload error:', error);
+    res.status(500).json({ message: 'Failed to upload assignment' });
+  }
 });
 
-app.get('/api/assignments', (req, res) => {
-  res.json({ assignments });
+app.get('/api/assignments', async (req, res) => {
+  try {
+    const assignments = await prisma.assignment.findMany({
+      include: {
+        uploader: {
+          select: { name: true, email: true }
+        }
+      }
+    });
+    res.json({ assignments });
+  } catch (error) {
+    console.error('Get assignments error:', error);
+    res.status(500).json({ message: 'Failed to get assignments' });
+  }
 });
 
-app.get('/api/assignments/:id/download', (req, res) => {
-  const assignment = assignments.find(a => a.id == req.params.id);
-  if (!assignment) return res.status(404).json({ message: 'Not found' });
-  res.download(assignment.path, assignment.originalname);
+app.get('/api/assignments/:id/download', async (req, res) => {
+  try {
+    const assignment = await prisma.assignment.findUnique({
+      where: { id: parseInt(req.params.id) }
+    });
+    if (!assignment) return res.status(404).json({ message: 'Not found' });
+    res.download(assignment.path, assignment.originalname);
+  } catch (error) {
+    console.error('Download error:', error);
+    res.status(500).json({ message: 'Failed to download file' });
+  }
 });
 
 // --- RESOURCES ---
-app.post('/api/resources/upload', upload.single('file'), (req, res) => {
-  const { title, description, subjectId } = req.body;
-  const file = req.file;
-  if (!file) return res.status(400).json({ message: 'No file uploaded' });
-  const resource = {
-    id: resources.length + 1,
-    title,
-    description,
-    subjectId,
-    filename: file.filename,
-    originalname: file.originalname,
-    path: file.path,
-    mimetype: file.mimetype,
-    size: file.size,
-    uploadedAt: new Date(),
-  };
-  resources.push(resource);
-  res.json({ resource });
-});
-
-app.get('/api/resources', (req, res) => {
-  res.json({ resources });
-});
-
-app.get('/api/resources/:id/download', (req, res) => {
-  const resource = resources.find(r => r.id == req.params.id);
-  if (!resource) return res.status(404).json({ message: 'Not found' });
-  res.download(resource.path, resource.originalname);
-});
-
-app.listen(PORT, () => {
-  console.log(`File upload/download API running at http://localhost:${PORT}`);
-});
-
-// In-memory user store for demo
-
-// Registration endpoint
-app.post('/api/auth/register', (req, res) => {
-  const { name, email, password, role, gradeLevel } = req.body;
-  if (!name || !email || !password || !role || !gradeLevel) {
-    return res.status(400).json({ message: 'Missing required fields' });
+app.post('/api/resources/upload', upload.single('file'), async (req, res) => {
+  try {
+    const { title, description, type, subject, subjectId, uploadedBy } = req.body;
+    const file = req.file;
+    if (!file) return res.status(400).json({ message: 'No file uploaded' });
+    
+    const resource = await prisma.resource.create({
+      data: {
+        title,
+        description,
+        type,
+        subject,
+        subjectId,
+        filename: file.filename,
+        originalname: file.originalname,
+        path: file.path,
+        mimetype: file.mimetype,
+        size: file.size,
+        uploadedBy: parseInt(uploadedBy) || 1, // Default to user 1 if not provided
+      },
+    });
+    res.json({ resource });
+  } catch (error) {
+    console.error('Resource upload error:', error);
+    res.status(500).json({ message: 'Failed to upload resource' });
   }
-  if (users.find(u => u.email === email)) {
-    return res.status(400).json({ message: 'Email already registered' });
-  }
-  const user = {
-    id: users.length + 1,
-    name,
-    email,
-    password, // In production, hash the password!
-    role,
-    gradeLevel,
-  };
-  users.push(user);
-  // Don't return password to client
-  const { password: _, ...userWithoutPassword } = user;
-  res.json({ user: userWithoutPassword });
 });
 
-// Login endpoint
-app.post('/api/auth/login', (req, res) => {
-  const { email, password } = req.body;
-  const user = users.find(u => u.email === email && u.password === password);
-  if (!user) {
-    return res.status(401).json({ message: 'Invalid email or password' });
+app.get('/api/resources', async (req, res) => {
+  try {
+    const resources = await prisma.resource.findMany({
+      include: {
+        uploader: {
+          select: { name: true, email: true }
+        }
+      }
+    });
+    res.json({ resources });
+  } catch (error) {
+    console.error('Get resources error:', error);
+    res.status(500).json({ message: 'Failed to get resources' });
   }
-  // Don't return password to client
-  const { password: _, ...userWithoutPassword } = user;
-  res.json({ user: userWithoutPassword });
+});
+
+app.get('/api/resources/:id/download', async (req, res) => {
+  try {
+    const resource = await prisma.resource.findUnique({
+      where: { id: parseInt(req.params.id) }
+    });
+    if (!resource) return res.status(404).json({ message: 'Not found' });
+    res.download(resource.path, resource.originalname);
+  } catch (error) {
+    console.error('Download error:', error);
+    res.status(500).json({ message: 'Failed to download file' });
+  }
+});
+
+// --- AUTHENTICATION ---
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { name, email, password, role, gradeLevel } = req.body;
+    if (!name || !email || !password || !role || !gradeLevel) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+    
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email already registered' });
+    }
+    
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password, // In production, hash the password!
+        role,
+        gradeLevel,
+      },
+    });
+    
+    // Don't return password to client
+    const { password: _, ...userWithoutPassword } = user;
+    res.json({ user: userWithoutPassword });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ message: 'Failed to register user' });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+    
+    if (!user || user.password !== password) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+    
+    // Don't return password to client
+    const { password: _, ...userWithoutPassword } = user;
+    res.json({ user: userWithoutPassword });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Failed to login' });
+  }
 });
 
 // Avatar upload endpoint
-app.post('/api/auth/upload-avatar', upload.single('avatar'), (req, res) => {
-  const file = req.file;
-  if (!file) return res.status(400).json({ message: 'No file uploaded' });
-  // For demo, return a local URL
-  const url = `http://${req.hostname}:${PORT}/uploads/${file.filename}`;
-  res.json({ url });
+app.post('/api/auth/upload-avatar', upload.single('avatar'), async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ message: 'No file uploaded' });
+    
+    const url = `https://${req.hostname}/uploads/${file.filename}`;
+    res.json({ url });
+  } catch (error) {
+    console.error('Avatar upload error:', error);
+    res.status(500).json({ message: 'Failed to upload avatar' });
+  }
 });
 
 // Profile update endpoint
-app.post('/api/auth/update-profile', (req, res) => {
-  const { id, name, gradeLevel, school, avatar } = req.body;
-  const user = users.find(u => u.id == id);
-  if (!user) return res.status(404).json({ message: 'User not found' });
-  if (name) user.name = name;
-  if (gradeLevel) user.gradeLevel = gradeLevel;
-  if (school) user.school = school;
-  if (avatar) user.avatar = avatar;
-  res.json({ user: { ...user, password: undefined } });
+app.post('/api/auth/update-profile', async (req, res) => {
+  try {
+    const { id, name, gradeLevel, school, avatar } = req.body;
+    const user = await prisma.user.update({
+      where: { id: parseInt(id) },
+      data: {
+        name,
+        gradeLevel,
+        school,
+        avatar,
+      },
+    });
+    res.json({ user: { ...user, password: undefined } });
+  } catch (error) {
+    console.error('Profile update error:', error);
+    res.status(500).json({ message: 'Failed to update profile' });
+  }
 });
 
 // Change password endpoint
-app.post('/api/auth/change-password', (req, res) => {
-  const { id, currentPassword, newPassword } = req.body;
-  const user = users.find(u => u.id == id);
-  if (!user) return res.status(404).json({ message: 'User not found' });
-  if (user.password !== currentPassword) {
-    return res.status(400).json({ message: 'Current password is incorrect' });
+app.post('/api/auth/change-password', async (req, res) => {
+  try {
+    const { id, currentPassword, newPassword } = req.body;
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(id) }
+    });
+    
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (user.password !== currentPassword) {
+      return res.status(400).json({ message: 'Current password is incorrect' });
+    }
+    
+    await prisma.user.update({
+      where: { id: parseInt(id) },
+      data: { password: newPassword }
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Password change error:', error);
+    res.status(500).json({ message: 'Failed to change password' });
   }
-  user.password = newPassword;
-  res.json({ success: true });
 });
 
 // Forgot password endpoint
-app.post('/api/auth/forgot-password', (req, res) => {
-  const { email } = req.body;
-  if (!email) {
-    return res.status(400).json({ message: 'Email is required' });
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+    // In a real app, send an email with reset link
+    // For demo, just return success
+    res.json({ message: 'If the email exists, a reset link has been sent' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ message: 'Failed to process request' });
   }
-  // In a real app, send an email with reset link
-  // For demo, just return success
-  res.json({ message: 'If the email exists, a reset link has been sent' });
 });
 
-// In-memory community posts store
-
-// Get community posts
-app.get('/api/community/posts', (req, res) => {
-  const { type, category, gradeLevel, subject } = req.query;
-  let filteredPosts = [...communityPosts];
-  
-  if (type) filteredPosts = filteredPosts.filter(post => post.type === type);
-  if (category) filteredPosts = filteredPosts.filter(post => post.category === category);
-  if (gradeLevel) filteredPosts = filteredPosts.filter(post => post.gradeLevel === gradeLevel);
-  if (subject) filteredPosts = filteredPosts.filter(post => post.subject.toLowerCase().includes(subject.toLowerCase()));
-  
-  res.json(filteredPosts);
-});
-
-// Create community post
-app.post('/api/community/posts', (req, res) => {
-  const { title, description, type, category, subject, authorId, authorName, gradeLevel } = req.body;
-  if (!title || !description || !type || !category || !subject || !authorId || !authorName) {
-    return res.status(400).json({ message: 'Missing required fields' });
+// --- COURSES ---
+app.post('/api/courses', async (req, res) => {
+  try {
+    const { title, description, gradeLevel, subject, teacherId } = req.body;
+    if (!title || !gradeLevel || !subject || !teacherId) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+    
+    const course = await prisma.course.create({
+      data: {
+        title,
+        description,
+        gradeLevel,
+        subject,
+        teacherId: parseInt(teacherId),
+      },
+    });
+    res.json({ course });
+  } catch (error) {
+    console.error('Course creation error:', error);
+    res.status(500).json({ message: 'Failed to create course' });
   }
-  const post = {
-    id: communityPosts.length + 1,
-    title,
-    description,
-    type,
-    category,
-    subject,
-    authorId,
-    authorName,
-    gradeLevel,
-    downloads: 0,
-    rating: 0,
-    ratingCount: 0,
-    createdAt: new Date().toISOString(),
-  };
-  communityPosts.push(post);
-  res.json(post);
 });
 
-// Rate a community post
-app.post('/api/community/posts/:id/rate', (req, res) => {
-  const { id } = req.params;
-  const { userId, rating } = req.body;
-  const post = communityPosts.find(p => p.id == id);
-  if (!post) return res.status(404).json({ message: 'Post not found' });
-  // In a real app, store ratings separately and calculate average
-  res.json({ success: true });
-});
-
-// In-memory notifications store
-
-// Get notifications for a user
-app.get('/api/notifications', (req, res) => {
-  const { userId } = req.query;
-  const userNotifications = notifications.filter(n => n.userId == userId);
-  res.json({ notifications: userNotifications });
-});
-
-// Create notification
-app.post('/api/notifications', (req, res) => {
-  const { userId, title, message } = req.body;
-  if (!userId || !title || !message) {
-    return res.status(400).json({ message: 'Missing required fields' });
+app.get('/api/courses', async (req, res) => {
+  try {
+    const courses = await prisma.course.findMany({
+      include: {
+        teacher: {
+          select: { name: true, email: true }
+        },
+        enrollments: {
+          include: {
+            user: {
+              select: { name: true, email: true }
+            }
+          }
+        }
+      }
+    });
+    res.json({ courses });
+  } catch (error) {
+    console.error('Get courses error:', error);
+    res.status(500).json({ message: 'Failed to get courses' });
   }
-  const notification = {
-    id: notifications.length + 1,
-    userId,
-    title,
-    message,
-    read: false,
-    createdAt: new Date().toISOString(),
-  };
-  notifications.push(notification);
-  res.json(notification);
 });
 
-// Mark notification as read
-app.patch('/api/notifications/:id/read', (req, res) => {
-  const { id } = req.params;
-  const notification = notifications.find(n => n.id == id);
-  if (!notification) return res.status(404).json({ message: 'Notification not found' });
-  notification.read = true;
-  res.json(notification);
-});
-
-// In-memory courses store
-
-// Create course (teacher only)
-app.post('/api/courses', (req, res) => {
-  const { title, description, gradeLevel, subject, teacherId } = req.body;
-  if (!title || !gradeLevel || !subject || !teacherId) {
-    return res.status(400).json({ message: 'Missing required fields' });
+app.get('/api/courses/:id', async (req, res) => {
+  try {
+    const course = await prisma.course.findUnique({
+      where: { id: parseInt(req.params.id) },
+      include: {
+        teacher: {
+          select: { name: true, email: true }
+        },
+        enrollments: {
+          include: {
+            user: {
+              select: { name: true, email: true }
+            }
+          }
+        }
+      }
+    });
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+    res.json(course);
+  } catch (error) {
+    console.error('Get course error:', error);
+    res.status(500).json({ message: 'Failed to get course' });
   }
-  const course = {
-    id: courses.length + 1,
-    title,
-    description,
-    gradeLevel,
-    subject,
-    teacherId,
-    students: [],
-    createdAt: new Date(),
-  };
-  courses.push(course);
-  res.json({ course });
 });
 
-// List all courses
-app.get('/api/courses', (req, res) => {
-  res.json({ courses });
-});
-
-// Get a single course by ID
-app.get('/api/courses/:id', (req, res) => {
-  const course = courses.find(c => String(c.id) === String(req.params.id));
-  if (!course) return res.status(404).json({ message: 'Course not found' });
-  res.json(course);
-});
-
-// Get assignments for a course
-app.get('/api/courses/:courseId/assignments', (req, res) => {
-  const { courseId } = req.params;
-  const courseAssignments = assignments.filter(a => String(a.courseId) === String(courseId));
-  res.json({ assignments: courseAssignments });
-});
-
-// Join course (student)
-app.post('/api/courses/:id/join', (req, res) => {
-  const { id } = req.params;
-  const { userId } = req.body;
-  const course = courses.find(c => c.id == id);
-  if (!course) return res.status(404).json({ message: 'Course not found' });
-  if (!userId) return res.status(400).json({ message: 'Missing userId' });
-  if (!course.students.includes(userId)) {
-    course.students.push(userId);
+app.post('/api/courses/:id/join', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body;
+    
+    if (!userId) return res.status(400).json({ message: 'Missing userId' });
+    
+    const enrollment = await prisma.courseEnrollment.create({
+      data: {
+        userId: parseInt(userId),
+        courseId: parseInt(id),
+      },
+    });
+    res.json({ enrollment });
+  } catch (error) {
+    console.error('Join course error:', error);
+    res.status(500).json({ message: 'Failed to join course' });
   }
-  res.json({ course });
 });
 
-// Leave course (student)
-app.post('/api/courses/:id/leave', (req, res) => {
-  const { id } = req.params;
-  const { userId } = req.body;
-  const course = courses.find(c => c.id == id);
-  if (!course) return res.status(404).json({ message: 'Course not found' });
-  if (!userId) return res.status(400).json({ message: 'Missing userId' });
-  course.students = course.students.filter(uid => uid !== userId);
-  res.json({ course });
-});
-
-// In-memory comments store
-
-// In-memory banned users
-
-// Report a comment
-app.post('/api/comments/:id/report', (req, res) => {
-  const { id } = req.params;
-  const { userId } = req.body;
-  const comment = comments.find(c => c.id == id);
-  if (!comment) return res.status(404).json({ message: 'Comment not found' });
-  if (!comment.reports) comment.reports = [];
-  if (!comment.reports.includes(userId)) comment.reports.push(userId);
-  res.json({ comment });
-});
-
-// Get reported comments (moderators only)
-app.get('/api/comments/reported', (req, res) => {
-  const reported = comments.filter(c => c.reports && c.reports.length > 0);
-  res.json({ comments: reported });
-});
-
-// Ban a user (moderators only)
-app.post('/api/users/:id/ban', (req, res) => {
-  const { id } = req.params;
-  if (!bannedUsers.includes(id)) bannedUsers.push(id);
-  res.json({ success: true });
-});
-
-// Prevent banned users from posting comments
-const isBanned = (userId) => bannedUsers.includes(userId);
-
-// Add a comment
-app.post('/api/comments', (req, res) => {
-  const { type, itemId, userId, userName, text } = req.body;
-  if (!type || !itemId || !userId || !userName || !text) {
-    return res.status(400).json({ message: 'Missing required fields' });
+app.post('/api/courses/:id/leave', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body;
+    
+    if (!userId) return res.status(400).json({ message: 'Missing userId' });
+    
+    await prisma.courseEnrollment.deleteMany({
+      where: {
+        userId: parseInt(userId),
+        courseId: parseInt(id),
+      },
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Leave course error:', error);
+    res.status(500).json({ message: 'Failed to leave course' });
   }
-  if (isBanned(userId)) {
-    return res.status(403).json({ message: 'User is banned from commenting' });
+});
+
+// --- COMMUNITY POSTS ---
+app.get('/api/community/posts', async (req, res) => {
+  try {
+    const { type, category, gradeLevel, subject } = req.query;
+    const where = {};
+    
+    if (type) where.type = type;
+    if (category) where.category = category;
+    if (gradeLevel) where.gradeLevel = gradeLevel;
+    if (subject) where.subject = { contains: subject, mode: 'insensitive' };
+    
+    const posts = await prisma.communityPost.findMany({
+      where,
+      include: {
+        author: {
+          select: { name: true, email: true }
+        }
+      }
+    });
+    res.json(posts);
+  } catch (error) {
+    console.error('Get community posts error:', error);
+    res.status(500).json({ message: 'Failed to get community posts' });
   }
-  const comment = {
-    id: comments.length + 1,
-    type, // 'resource' or 'assignment'
-    itemId,
-    userId,
-    userName,
-    text,
-    createdAt: new Date(),
-    reports: [],
-  };
-  comments.push(comment);
-  res.json({ comment });
 });
 
-// Edit a comment
-app.patch('/api/comments/:id', (req, res) => {
-  const { id } = req.params;
-  const { text, userId } = req.body;
-  const comment = comments.find(c => c.id == id);
-  if (!comment) return res.status(404).json({ message: 'Comment not found' });
-  if (comment.userId !== userId) return res.status(403).json({ message: 'Not allowed' });
-  comment.text = text;
-  res.json({ comment });
-});
-
-// Delete a comment (poster or teacher/admin)
-app.delete('/api/comments/:id', (req, res) => {
-  const { id } = req.params;
-  const { userId, isModerator } = req.body;
-  const idx = comments.findIndex(c => c.id == id);
-  if (idx === -1) return res.status(404).json({ message: 'Comment not found' });
-  const comment = comments[idx];
-  if (comment.userId !== userId && !isModerator) return res.status(403).json({ message: 'Not allowed' });
-  comments.splice(idx, 1);
-  // Also delete replies
-  for (let i = comments.length - 1; i >= 0; i--) {
-    if (comments[i].parentId == id) comments.splice(i, 1);
+app.post('/api/community/posts', async (req, res) => {
+  try {
+    const { title, description, type, category, subject, authorId, authorName, gradeLevel } = req.body;
+    if (!title || !description || !type || !category || !subject || !authorId || !authorName) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+    
+    const post = await prisma.communityPost.create({
+      data: {
+        title,
+        description,
+        type,
+        category,
+        subject,
+        authorId: parseInt(authorId),
+        authorName,
+        gradeLevel,
+      },
+    });
+    res.json(post);
+  } catch (error) {
+    console.error('Create community post error:', error);
+    res.status(500).json({ message: 'Failed to create community post' });
   }
-  res.json({ success: true });
 });
 
-// Add a reply to a comment
-app.post('/api/comments/:id/reply', (req, res) => {
-  const { id } = req.params;
-  const { type, itemId, userId, userName, text } = req.body;
-  if (!type || !itemId || !userId || !userName || !text) {
-    return res.status(400).json({ message: 'Missing required fields' });
+// --- NOTIFICATIONS ---
+app.get('/api/notifications', async (req, res) => {
+  try {
+    const { userId } = req.query;
+    const notifications = await prisma.notification.findMany({
+      where: { userId: parseInt(userId) },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ notifications });
+  } catch (error) {
+    console.error('Get notifications error:', error);
+    res.status(500).json({ message: 'Failed to get notifications' });
   }
-  if (isBanned(userId)) {
-    return res.status(403).json({ message: 'User is banned from commenting' });
+});
+
+app.post('/api/notifications', async (req, res) => {
+  try {
+    const { userId, title, message } = req.body;
+    if (!userId || !title || !message) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+    
+    const notification = await prisma.notification.create({
+      data: {
+        userId: parseInt(userId),
+        title,
+        message,
+      },
+    });
+    res.json(notification);
+  } catch (error) {
+    console.error('Create notification error:', error);
+    res.status(500).json({ message: 'Failed to create notification' });
   }
-  const reply = {
-    id: comments.length + 1,
-    type,
-    itemId,
-    userId,
-    userName,
-    text,
-    parentId: id,
-    createdAt: new Date(),
-    reports: [],
-  };
-  comments.push(reply);
-  res.json({ comment: reply });
 });
 
-// Get comments for a resource or assignment (threaded)
-app.get('/api/comments', (req, res) => {
-  const { type, id } = req.query;
-  if (!type || !id) return res.status(400).json({ message: 'Missing type or id' });
-  // Get top-level comments
-  const itemComments = comments.filter(c => c.type === type && c.itemId == id && !c.parentId);
-  // Attach replies
-  const withReplies = itemComments.map(c => ({
-    ...c,
-    replies: comments.filter(r => r.parentId == c.id)
-  }));
-  res.json({ comments: withReplies });
-});
-
-// In-memory chat messages per course
-
-// Get chat messages for a course
-app.get('/api/courses/:id/chat', (req, res) => {
-  const { id } = req.params;
-  if (!courseChats[id]) courseChats[id] = [];
-  res.json({ messages: courseChats[id] });
-});
-
-// Send a chat message to a course
-app.post('/api/courses/:id/chat', (req, res) => {
-  const { id } = req.params;
-  const { userId, userName, text } = req.body;
-  if (!userId || !userName || !text) {
-    return res.status(400).json({ message: 'Missing required fields' });
+app.patch('/api/notifications/:id/read', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const notification = await prisma.notification.update({
+      where: { id: parseInt(id) },
+      data: { read: true }
+    });
+    res.json(notification);
+  } catch (error) {
+    console.error('Mark notification read error:', error);
+    res.status(500).json({ message: 'Failed to mark notification as read' });
   }
-  const course = courses.find(c => String(c.id) === String(id));
-  if (!course) return res.status(404).json({ message: 'Course not found' });
-  if (!course.students.includes(userId) && course.teacherId !== userId) {
-    return res.status(403).json({ message: 'Not a member of this course' });
-  }
-  if (!courseChats[id]) courseChats[id] = [];
-  const message = {
-    id: courseChats[id].length + 1,
-    userId,
-    userName,
-    text,
-    timestamp: new Date().toISOString(),
-  };
-  courseChats[id].push(message);
-  res.json({ message });
 });
+
+// --- COMMENTS ---
+app.post('/api/comments', async (req, res) => {
+  try {
+    const { type, itemId, userId, userName, text } = req.body;
+    if (!type || !itemId || !userId || !userName || !text) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+    
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(userId) }
+    });
+    
+    if (user.banned) {
+      return res.status(403).json({ message: 'User is banned from commenting' });
+    }
+    
+    const comment = await prisma.comment.create({
+      data: {
+        type,
+        itemId: parseInt(itemId),
+        userId: parseInt(userId),
+        userName,
+        text,
+      },
+    });
+    res.json({ comment });
+  } catch (error) {
+    console.error('Create comment error:', error);
+    res.status(500).json({ message: 'Failed to create comment' });
+  }
+});
+
+app.get('/api/comments', async (req, res) => {
+  try {
+    const { type, id } = req.query;
+    if (!type || !id) return res.status(400).json({ message: 'Missing type or id' });
+    
+    const comments = await prisma.comment.findMany({
+      where: {
+        type,
+        itemId: parseInt(id),
+        parentId: null, // Only top-level comments
+      },
+      include: {
+        user: {
+          select: { name: true, email: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    // Get replies for each comment
+    const commentsWithReplies = await Promise.all(
+      comments.map(async (comment) => {
+        const replies = await prisma.comment.findMany({
+          where: { parentId: comment.id },
+          include: {
+            user: {
+              select: { name: true, email: true }
+            }
+          },
+          orderBy: { createdAt: 'asc' }
+        });
+        return { ...comment, replies };
+      })
+    );
+    
+    res.json({ comments: commentsWithReplies });
+  } catch (error) {
+    console.error('Get comments error:', error);
+    res.status(500).json({ message: 'Failed to get comments' });
+  }
+});
+
+// --- CHAT ---
+app.get('/api/courses/:id/chat', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const messages = await prisma.chatMessage.findMany({
+      where: { courseId: parseInt(id) },
+      include: {
+        user: {
+          select: { name: true, email: true }
+        }
+      },
+      orderBy: { timestamp: 'asc' }
+    });
+    res.json({ messages });
+  } catch (error) {
+    console.error('Get chat messages error:', error);
+    res.status(500).json({ message: 'Failed to get chat messages' });
+  }
+});
+
+app.post('/api/courses/:id/chat', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId, userName, text } = req.body;
+    if (!userId || !userName || !text) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+    
+    const message = await prisma.chatMessage.create({
+      data: {
+        courseId: parseInt(id),
+        userId: parseInt(userId),
+        userName,
+        text,
+      },
+    });
+    res.json({ message });
+  } catch (error) {
+    console.error('Send chat message error:', error);
+    res.status(500).json({ message: 'Failed to send message' });
+  }
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`FUNDAmental Backend API running at http://localhost:${PORT}`);
+});
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  await prisma.$disconnect();
+  process.exit(0);
+}); 

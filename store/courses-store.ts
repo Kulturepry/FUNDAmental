@@ -18,7 +18,7 @@ interface CoursesState {
 }
 
 // API endpoints (will be replaced with real backend)
-const API_BASE_URL = 'http://192.168.137.1:3001/api';
+const API_BASE_URL = 'https://fundamental.onrender.com/api';
 
 export const useCoursesStore = create<CoursesState>((set, get) => ({
   courses: [],

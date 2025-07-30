@@ -67,14 +67,19 @@ export default function ResourcesScreen() {
     setAdding(true);
     try {
       const formData = new FormData();
-      formData.append('file', newResourceFile as any);
+      formData.append('file', {
+        uri: newResourceFile.uri,
+        name: newResourceFile.name,
+        type: newResourceFile.mimeType || 'application/octet-stream',
+      } as any);
       formData.append('title', newResourceTitle);
       formData.append('description', newResourceDescription);
       formData.append('type', newResourceType);
       formData.append('subject', newResourceSubject);
       formData.append('subjectId', user?.gradeLevel || '');
+      formData.append('uploadedBy', user?.id.toString() || '1');
       
-      const response = await fetch('http://192.168.137.1:3001/api/resources/upload', {
+      const response = await fetch('https://fundamental.onrender.com/api/resources/upload', {
         method: 'POST',
         body: formData,
       });
@@ -122,11 +127,16 @@ export default function ResourcesScreen() {
       if (result.canceled) return;
       const file = result.assets[0];
       const formData = new FormData();
-      formData.append('file', file as any);
+      formData.append('file', {
+        uri: file.uri,
+        name: file.name,
+        type: file.mimeType || 'application/octet-stream',
+      } as any);
       formData.append('title', file.name);
       formData.append('description', 'Uploaded via app');
       formData.append('subjectId', user.gradeLevel || '');
-      const response = await fetch('http://192.168.137.1:3001/api/resources/upload', {
+      formData.append('uploadedBy', user.id.toString());
+      const response = await fetch('https://fundamental.onrender.com/api/resources/upload', {
         method: 'POST',
         body: formData,
       });
@@ -141,7 +151,7 @@ export default function ResourcesScreen() {
 
   const handleDownloadResource = async (resource: any) => {
     try {
-      const url = `http://192.168.137.1:3001/api/resources/${resource.id}/download`;
+      const url = `https://fundamental.onrender.com/api/resources/${resource.id}/download`;
       // For demo: open in browser (real app: use FileSystem API)
       if (Platform.OS === 'web') {
         window.open(url, '_blank');

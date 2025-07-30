@@ -1,0 +1,183 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   // 'student', 'teacher', 'admin'
+  gradeLevel String?
+  school    String?
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  coursesCreated Course[] @relation("TeacherCourses")
+  coursesEnrolled CourseEnrollment[]
+  assignments    Assignment[]
+  resources      Resource[]
+  notifications  Notification[]
+  comments       Comment[]
+  communityPosts CommunityPost[]
+  chatMessages   ChatMessage[]
+  banned         Boolean @default(false)
+
+  @@map("users")
+}
+
+model Course {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  gradeLevel  String
+  subject     String
+  teacherId   Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  teacher     User     @relation("TeacherCourses", fields: [teacherId], references: [id])
+  enrollments CourseEnrollment[]
+  assignments Assignment[]
+  chatMessages ChatMessage[]
+
+  @@map("courses")
+}
+
+model CourseEnrollment {
+  id       Int @id @default(autoincrement())
+  userId   Int
+  courseId Int
+  enrolledAt DateTime @default(now())
+
+  // Relations
+  user     User   @relation(fields: [userId], references: [id])
+  course   Course @relation(fields: [courseId], references: [id])
+
+  @@unique([userId, courseId])
+  @@map("course_enrollments")
+}
+
+model Assignment {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  courseId    Int?
+  classId     String?
+  filename    String
+  originalname String
+  path        String
+  mimetype    String
+  size        Int
+  uploadedAt  DateTime @default(now())
+  uploadedBy  Int
+
+  // Relations
+  course      Course?  @relation(fields: [courseId], references: [id])
+  uploader    User     @relation(fields: [uploadedBy], references: [id])
+  comments    Comment[]
+
+  @@map("assignments")
+}
+
+model Resource {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  type        String
+  subject     String?
+  subjectId   String?
+  filename    String
+  originalname String
+  path        String
+  mimetype    String
+  size        Int
+  uploadedAt  DateTime @default(now())
+  uploadedBy  Int
+
+  // Relations
+  uploader    User     @relation(fields: [uploadedBy], references: [id])
+  comments    Comment[]
+
+  @@map("resources")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  type      String   // 'resource' or 'assignment'
+  itemId    Int
+  userId    Int
+  userName  String
+  text      String
+  parentId  Int?     // For replies
+  createdAt DateTime @default(now())
+  reports   Int[]    // Array of user IDs who reported this comment
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id])
+  resource  Resource? @relation(fields: [itemId], references: [id])
+  assignment Assignment? @relation(fields: [itemId], references: [id])
+
+  @@map("comments")
+}
+
+model CommunityPost {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  type        String
+  category    String
+  subject     String
+  authorId    Int
+  authorName  String
+  gradeLevel  String?
+  downloads   Int      @default(0)
+  rating      Float    @default(0)
+  ratingCount Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  author      User     @relation(fields: [authorId], references: [id])
+
+  @@map("community_posts")
+}
+
+model ChatMessage {
+  id        Int      @id @default(autoincrement())
+  courseId  Int
+  userId    Int
+  userName  String
+  text      String
+  timestamp DateTime @default(now())
+
+  // Relations
+  course    Course   @relation(fields: [courseId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("chat_messages")
+} 

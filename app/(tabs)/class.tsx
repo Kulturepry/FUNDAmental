@@ -21,7 +21,7 @@ type Course = {
   createdAt?: string;
 };
 
-const API_BASE_URL = 'http://192.168.137.1:3001/api';
+const API_BASE_URL = 'https://fundamental.onrender.com/api';
 
 export default function ClassListScreen() {
   const user = useAuthStore(s => s.user);
