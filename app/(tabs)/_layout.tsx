@@ -11,6 +11,12 @@ import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
  */
 function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const scrollRef = useRef<ScrollView>(null);
+  
+  // Safety check - don't render if state is not properly initialized
+  if (!state || !state.routes || !descriptors) {
+    return null;
+  }
+  
   useEffect(() => {
     // Auto-scroll hint: scroll right then back
     const timeout1 = setTimeout(() => {
@@ -32,7 +38,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 8, gap: 8 }}
       >
-        {state.routes.map((route, index) => {
+        {state.routes?.map((route, index) => {
           const { options } = descriptors[route.key];
           const isFocused = state.index === index;
           const color = isFocused ? Colors.primary : Colors.text.secondary;
