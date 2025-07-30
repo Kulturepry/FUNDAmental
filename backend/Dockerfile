@@ -23,8 +23,12 @@ COPY . .
 # Create uploads directory
 RUN mkdir -p uploads
 
+# Make startup script executable
+COPY start.sh ./
+RUN chmod +x start.sh
+
 # Expose port
 EXPOSE 3001
 
-# Start the application
-CMD ["npm", "start"] 
+# Start the application with database setup
+CMD ["./start.sh"] 
