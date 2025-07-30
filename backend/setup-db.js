@@ -21,60 +21,8 @@ async function setupDatabase() {
     
     console.log('✅ Default admin user created:', adminUser.email);
     
-    // Create some sample courses
-    const sampleCourses = [
-      {
-        title: 'Introduction to Computer Science',
-        description: 'Learn the basics of programming and computer science',
-        gradeLevel: 'university_computer_science',
-        subject: 'Computer Science',
-        teacherId: adminUser.id,
-      },
-      {
-        title: 'Advanced Mathematics',
-        description: 'Advanced mathematical concepts and problem solving',
-        gradeLevel: 'university_mathematics',
-        subject: 'Mathematics',
-        teacherId: adminUser.id,
-      },
-      {
-        title: 'English Literature',
-        description: 'Study of classic and contemporary literature',
-        gradeLevel: 'university_english',
-        subject: 'English',
-        teacherId: adminUser.id,
-      },
-    ];
-    
-    for (const courseData of sampleCourses) {
-      const course = await prisma.course.create({
-        data: courseData,
-      });
-      console.log('✅ Sample course created:', course.title);
-    }
-    
-    // Create sample notifications
-    const sampleNotifications = [
-      {
-        userId: adminUser.id,
-        title: 'Welcome to FUNDAmental!',
-        message: 'Thank you for joining our learning platform. Start exploring courses and resources.',
-        read: false,
-      },
-      {
-        userId: adminUser.id,
-        title: 'New Course Available',
-        message: 'Introduction to Computer Science is now available for enrollment.',
-        read: false,
-      },
-    ];
-    
-    for (const notificationData of sampleNotifications) {
-      const notification = await prisma.notification.create({
-        data: notificationData,
-      });
-      console.log('✅ Sample notification created:', notification.title);
-    }
+    // No demo data - clean database setup
+    console.log('✅ Database setup completed with clean slate');
     
     console.log('\n🎉 Database setup completed successfully!');
     console.log('\nDefault admin credentials:');
